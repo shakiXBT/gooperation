@@ -17,7 +17,12 @@ import {VRFCoordinatorMock} from "chainlink/v0.8/mocks/VRFCoordinatorMock.sol";
 
 contract GooperationTest is DSTestPlus {
 
+    // GOOPERATION VARS
+
+    
     Gooperation public gooperation;
+
+    // ART GOBBLERS VARS
 
     Vm internal immutable vm = Vm(HEVM_ADDRESS);
 
@@ -39,7 +44,9 @@ contract GooperationTest is DSTestPlus {
     uint256[] ids;
     
     function setUp() public {
+
         gobblerSetup();
+        gooperation = new Gooperation(gobblers);
     }
 
     function gobblerSetup() public {
@@ -85,19 +92,10 @@ contract GooperationTest is DSTestPlus {
         pages = new Pages(block.timestamp, goo, address(0xBEEF), gobblers, "");
     }
 
-        /// @notice Test that minting from the mintlist before minting starts fails.
-    function testMintFromMintlistBeforeMintingStarts() public {
-        vm.warp(block.timestamp - 1);
+    // GOOPERATION TESTS
 
-        address user = users[0];
-        bytes32[] memory proof;
-        vm.prank(user);
-        vm.expectRevert(ArtGobblers.MintStartPending.selector);
-        gobblers.claimGobbler(proof);
-    }
-
-    /// @notice Test that you can mint from mintlist successfully.
-    function testMintFromMintlist() public {
+    /// @dev check that Gooperation implements onERC721Received
+    function testSendToGooperation() public {
         address user = users[0];
         bytes32[] memory proof;
         vm.prank(user);
@@ -105,6 +103,12 @@ contract GooperationTest is DSTestPlus {
         // verify gobbler ownership
         assertEq(gobblers.ownerOf(1), user);
         assertEq(gobblers.balanceOf(user), 1);
-    }
 
+        vm.prank(user);
+        gobblers.safeTransferFrom(user, address(gooperation), 1);
+
+        // verify gooperation ownership
+        assertEq(gobblers.ownerOf(1), address(gooperation));
+        assertEq(gobblers.balanceOf(address(gooperation)), 1);
+    }   
 }
