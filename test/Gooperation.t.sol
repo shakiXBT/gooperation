@@ -114,7 +114,7 @@ contract GooperationTest is DSTestPlus {
     }
     
     /// @dev check Gobbler withdrawal from Gooperation
-    function testSendToGooperation() public {
+    function testGobblerWithdrawal() public {
         address user = users[0];
         bytes32[] memory proof;
         vm.prank(user);
@@ -133,5 +133,28 @@ contract GooperationTest is DSTestPlus {
 
         assertEq(gobblers.ownerOf(1), user);
         assertEq(gobblers.balanceOf(user), 1);
+    }
+
+    /// @dev check Gobbler withdrawal from unauthorized wallet
+    function testUnauthorizeGobblerdWithdrawal() public {
+        address user = users[0];
+        address user1 = users[1];
+        bytes32[] memory proof;
+        vm.prank(user);
+        gobblers.claimGobbler(proof);
+        // verify gobbler ownership
+        assertEq(gobblers.ownerOf(1), user);
+        assertEq(gobblers.balanceOf(user), 1);
+
+        // deposit
+        vm.prank(user);
+        gobblers.safeTransferFrom(user, address(gooperation), 1);
+
+        // withdraw
+        vm.prank(user1);
+        vm.expectRevert(bytes("UNAUTHORIZED WITHDRAWAL"));
+        gooperation.withdrawGobblerTo(user1, 1);
+        
+        assertEq(gobblers.balanceOf(user1), 0);
     }
 }
