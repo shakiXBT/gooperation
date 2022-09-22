@@ -9,21 +9,31 @@ contract Gooperation is ERC721TokenReceiver {
 
     ArtGobblers public immutable artGobblers;
 
+    /// @dev gobblerOwnerships[userAddress][gobblerId] == true
+    mapping(address => mapping(uint256 => bool)) public gobblerOwnerships;
+
     /// @param _artGobblers ArtGobblers contract address
     constructor(ArtGobblers _artGobblers) {
         artGobblers = _artGobblers;
     }
 
-    /// @dev requires approval
-    function depositGobbler() public {}
+    function withdrawGobblerTo(address to, uint256 gobblerId) public {
+        require(gobblerOwnerships[msg.sender][gobblerId], "UNAUTHORIZED WITHDRAWAL");
+        artGobblers.safeTransferFrom(address(this), to, gobblerId);
+    }
 
-    function withdrawGobbler() public {}
+    function withdrawGobbler(uint256 gobblerId) public {
+        withdrawGobblerTo(msg.sender, gobblerId);
+    }
 
     function bidLegendaryGobbler() public {}
 
-    function onERC721Received(address, address, uint256, bytes memory) public virtual override returns (bytes4) {
-        // TODO add logic for receiving gobbler
+    function onERC721Received(address, address to, uint256 gobblerId, bytes memory) public virtual override returns (bytes4) {
+        gobblerOwnerships[to][gobblerId] = true;
         return this.onERC721Received.selector;
     }
 
+    function getGobblerOwnership(address owner, uint256 gobblerId) public view returns (bool) {
+        return gobblerOwnerships[owner][gobblerId];
+    }
 }

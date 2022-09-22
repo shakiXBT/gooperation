@@ -94,7 +94,26 @@ contract GooperationTest is DSTestPlus {
 
     // GOOPERATION TESTS
 
-    /// @dev check that Gooperation implements onERC721Received
+    /// @dev check Gobbler deposit to Gooperation
+    function testGobblerDeposit() public {
+        address user = users[0];
+        bytes32[] memory proof;
+        vm.prank(user);
+        gobblers.claimGobbler(proof);
+        // verify gobbler ownership
+        assertEq(gobblers.ownerOf(1), user);
+        assertEq(gobblers.balanceOf(user), 1);
+
+        // deposit
+        vm.prank(user);
+        gobblers.safeTransferFrom(user, address(gooperation), 1);
+
+        // verify gooperation ownership
+        assertEq(gobblers.ownerOf(1), address(gooperation));
+        assertEq(gobblers.balanceOf(address(gooperation)), 1);
+    }
+    
+    /// @dev check Gobbler withdrawal from Gooperation
     function testSendToGooperation() public {
         address user = users[0];
         bytes32[] memory proof;
@@ -104,11 +123,15 @@ contract GooperationTest is DSTestPlus {
         assertEq(gobblers.ownerOf(1), user);
         assertEq(gobblers.balanceOf(user), 1);
 
+        // deposit
         vm.prank(user);
         gobblers.safeTransferFrom(user, address(gooperation), 1);
 
-        // verify gooperation ownership
-        assertEq(gobblers.ownerOf(1), address(gooperation));
-        assertEq(gobblers.balanceOf(address(gooperation)), 1);
-    }   
+        // withdraw
+        vm.prank(user);
+        gooperation.withdrawGobblerTo(user, 1);
+
+        assertEq(gobblers.ownerOf(1), user);
+        assertEq(gobblers.balanceOf(user), 1);
+    }
 }
