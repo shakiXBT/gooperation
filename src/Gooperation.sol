@@ -1,12 +1,18 @@
 // SPDX-License-Identifier: MIT
 pragma solidity >=0.8.0;
 
+import {ArtGobblers} from "art-gobblers/ArtGobblers.sol";
+import {Goo} from "art-gobblers/Goo.sol";
+
 contract Gooperation {
 
-    address public immutable artGobblers;
+    ArtGobblers public immutable artGobblers;
 
-    constructor(address _artGobblers) {
+    /// @param _artGobblers ArtGobblers contract address
+    constructor(ArtGobblers _artGobblers) {
         artGobblers = _artGobblers;
     }
+
+
 
 }
