@@ -5,19 +5,29 @@ import {ArtGobblers} from "art-gobblers/ArtGobblers.sol";
 import {Goo} from "art-gobblers/Goo.sol";
 import {ERC721TokenReceiver} from "solmate/tokens/ERC721.sol";
 
+/// @title Gooperation
+/// @author shakiXBT
+/// @notice A contract for Gobblers to cooperate towards buying legendary Gobblers
 contract Gooperation is ERC721TokenReceiver {
 
+    /// @notice The address of the Art Gobblers contract
     ArtGobblers public immutable artGobblers;
+    
+    /// @notice The address of the Goo ERC20 token contract
     Goo public immutable goo;
 
+    /// @notice The user ownerships of Gobblers deposited in this contract
     /// @dev gobblerOwnerships[userAddress][gobblerId] == true
     mapping(address => mapping(uint256 => bool)) public gobblerOwnerships;
 
-    mapping(address => uint256) public getUserMultiplier;
+    /// @notice The user shares of Goo produced by the legendary gobbler owned by this contract
+    /// @dev An user's goo share is equal to the total multiplier of the gobblers they deposited
+    mapping(address => uint256) public getUserGooShare;
 
-    mapping(address => uint256) public gooOwnerships;
-
+    /// @notice The Gobbler ID of the legendary Gobbler minted through this contract
     uint256 public mintedLegendaryId;
+
+    /// @notice Flag for knowing if the contract has already won a legendary Gobbler auction
     bool public wonAuction;
 
     // ERRORS
@@ -25,6 +35,8 @@ contract Gooperation is ERC721TokenReceiver {
     error Unauthorized();
     error DepositsDisabled();
     error InsufficientGobblerAmount(uint256 cost);
+
+    // MODIFIERS
 
     modifier ownsGobbler(uint256 _gobblerId) {
         if (!gobblerOwnerships[msg.sender][_gobblerId]) revert Unauthorized();
@@ -47,6 +59,8 @@ contract Gooperation is ERC721TokenReceiver {
         _;
     }
 
+    // CONSTRUCTOR
+
     /// @notice Sets the addresses of relevant contracts
     /// @param _artGobblers Address of the ArtGobblers contract
     /// @param _goo Address of the Goo contract
@@ -55,11 +69,13 @@ contract Gooperation is ERC721TokenReceiver {
         goo = _goo;
     }
 
+    // FUNCTIONS
+
     function onERC721Received(address from, address, uint256 gobblerId, bytes memory) public virtual override onlyBeforeAuction() onlyBelowAuctionStartingPrice() returns (bytes4) {
         // update user ownership
         gobblerOwnerships[from][gobblerId] = true;
         // update user multiplier
-        getUserMultiplier[from] += artGobblers.getGobblerEmissionMultiple(gobblerId);
+        getUserGooShare[from] += artGobblers.getGobblerEmissionMultiple(gobblerId);
 
         return this.onERC721Received.selector;
     }
@@ -67,7 +83,7 @@ contract Gooperation is ERC721TokenReceiver {
     function withdrawGobblerTo(address to, uint256 gobblerId) external ownsGobbler(gobblerId) {
         artGobblers.safeTransferFrom(address(this), to, gobblerId);
         // update user multiplier
-        getUserMultiplier[msg.sender] -= artGobblers.getGobblerEmissionMultiple(gobblerId);
+        getUserGooShare[msg.sender] -= artGobblers.getGobblerEmissionMultiple(gobblerId);
     }
 
     /// @dev we leave the logic to choose which gobblers to burn to the user calling this function.
@@ -99,6 +115,8 @@ contract Gooperation is ERC721TokenReceiver {
         artgobblers.removeGoo()
     }
     */
+
+    // VIEW FUNCTIONS
 
     function getGobblerOwnership(address owner, uint256 gobblerId) public view returns (bool) {
         return gobblerOwnerships[owner][gobblerId];

@@ -230,14 +230,18 @@ contract GooperationTest is DSTestPlus {
             userMultiplier += gobblers.getGobblerEmissionMultiple(i);
         }
 
-        assertEq(userMultiplier, gooperation.getUserMultiplier(user));
-        emit log_named_uint("user has starting multiplier of", userMultiplier);
+        assertEq(userMultiplier, gooperation.getUserGooShare(user));
+        emit log_named_uint("gooperation has starting multiplier of", userMultiplier);
 
         // everyone should be able to call the mintLegendary function
         vm.prank(users[1]);
         uint256 mintedLegendaryId = gooperation.mintLegendaryGobbler(ids);
-
+        
         emit log_named_uint("minted legendary with id: ", mintedLegendaryId);
+        assertEq(gobblers.ownerOf(mintedLegendaryId), address(gooperation));
+
+        assertEq(userMultiplier * 2, gobblers.getUserEmissionMultiple(address(gooperation)));
+        emit log_named_uint("gooperation has final multiplier of", gobblers.getUserEmissionMultiple(address(gooperation)));
     }
 
     /*
