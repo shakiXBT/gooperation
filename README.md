@@ -35,3 +35,8 @@ forge test
 
 - handling legendary gobbler after auction is won
 - handling goo deposits/withdrawals and each user's share
+
+### Ideas:
+
+Deposit goo -> calc new updated share for user
+Withdraw goo -> calc new updated share for user

@@ -34,6 +34,7 @@ contract Gooperation is ERC721TokenReceiver {
 
     error Unauthorized();
     error DepositsDisabled();
+    error ClaimsDisabled();
     error InsufficientGobblerAmount(uint256 cost);
 
     // MODIFIERS
@@ -46,6 +47,12 @@ contract Gooperation is ERC721TokenReceiver {
 
     modifier onlyBeforeAuction() {
         if (wonAuction) revert DepositsDisabled();
+
+        _;
+    }
+
+    modifier onlyAfterAuctionWin() {
+        if (!wonAuction) revert ClaimsDisabled();
 
         _;
     }
@@ -104,9 +111,24 @@ contract Gooperation is ERC721TokenReceiver {
     // TODO
     /// @dev requires approval
     function depositGoo(uint256 _amount) public {
+        require(goo.balanceOf(msg.sender) >= _amount, "you dont have enough goo");
+        require(goo.allowance(msg.sender, address(this)) >= _amount, "Check the token allowance");
         goo.transferFrom(msg.sender, address(this), _amount);
         // burn goo erc20 to add virtual goo balance
         // artgobblers.addGoo()
+        // re-calculate user multiplier based on goo deposit
+    }
+    
+    // TODO
+    function claimUserGooShare() public onlyAfterAuctionWin() {
+        uint256 totalGoo = artGobblers.gooBalance(address(this));
+        
+        // uint256 userShare = totalGoo.divWadDown(artGobblers.getUserEmissionMultiple(address(this)));
+        uint256 userShare = (totalGoo / artGobblers.getUserEmissionMultiple(address(this))) * (getUserGooShare[msg.sender] * 2);
+        getUserGooShare[msg.sender] = 0;
+        // transform virtual Goo to ERC20 for withdrawing
+        artGobblers.removeGoo(userShare);
+        goo.transferFrom(address(this), msg.sender, userShare);
     }
 
     /*
@@ -121,5 +143,15 @@ contract Gooperation is ERC721TokenReceiver {
 
     function getGobblerOwnership(address owner, uint256 gobblerId) public view returns (bool) {
         return gobblerOwnerships[owner][gobblerId];
+    }
+
+    function getUserTotalGooShare(address user) public view returns (uint256) {
+        uint256 gooperationShare = artGobblers.gooBalance(address(this));
+        return (gooperationShare / artGobblers.getUserEmissionMultiple(address(this))) * getUserGooShare[user];
+
+    }
+
+    function getUserTotalGooShare() public view returns (uint256) {
+        return getUserTotalGooShare(msg.sender);
     }
 }

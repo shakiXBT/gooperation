@@ -55,7 +55,7 @@ contract GooperationTest is DSTestPlus {
         linkToken = new LinkToken();
         vrfCoordinator = new VRFCoordinatorMock(address(linkToken));
 
-        //gobblers contract will be deployed after 4 contract deploys, and pages after 5
+        // gobblers contract will be deployed after 4 contract deploys, pages after 5
         address gobblerAddress = utils.predictContractAddress(address(this), 4);
         address pagesAddress = utils.predictContractAddress(address(this), 5);
 
@@ -70,9 +70,9 @@ contract GooperationTest is DSTestPlus {
         );
 
         goo = new Goo(
-            // Gobblers:
+            // Gobblers
             utils.predictContractAddress(address(this), 1),
-            // Pages:
+            // Pages
             utils.predictContractAddress(address(this), 2)
         );
 
@@ -244,7 +244,6 @@ contract GooperationTest is DSTestPlus {
         emit log_named_uint("gooperation has final multiplier of", gobblers.getUserEmissionMultiple(address(gooperation)));
     }
 
-    /*
     function testDepositGoo() public {
         address user = users[0];
         bytes32[] memory proof;
@@ -252,13 +251,23 @@ contract GooperationTest is DSTestPlus {
         gobblers.claimGobbler(proof);
 
         vm.prank(address(gobblers));
-        goo.mintForGobblers(user, 1000000);
+        goo.mintForGobblers(user, 1e18);
+        assertEq(goo.balanceOf(user), 1e18);
+
+        // approve
+        vm.prank(user);
+        goo.approve(address(gooperation), 1e18);
 
         // deposit goo into gooperation
         vm.prank(user);
-        gooperation.depositGoo(1000000);
+        gooperation.depositGoo(1e18);
+        // TODO check other logic
     }
-    */
+
+    function testClaimUserGooShare() public {
+        // win auction
+        // try withdrawing goo
+    }
 
     // HELPERS
 
