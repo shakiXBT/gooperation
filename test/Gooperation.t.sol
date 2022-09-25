@@ -265,8 +265,45 @@ contract GooperationTest is DSTestPlus {
     }
 
     function testClaimUserGooShare() public {
-        // win auction
-        // try withdrawing goo
+        address user = users[0];
+        uint256 startTime = block.timestamp + 30 days;
+        vm.warp(startTime);
+        // Mint full interval to kick off first auction.
+        mintGobblerToAddress(user, gobblers.LEGENDARY_AUCTION_INTERVAL());
+        // can now call this without revert
+        uint256 cost = gobblers.legendaryGobblerPrice();
+        setRandomnessAndReveal(cost, "seed");
+
+        uint256 userMultiplier;
+
+        // Deposit to Gooperation
+        for (uint256 i = 1; i <= cost; ++i) {
+            ids.push(i);
+            vm.prank(user);
+            gobblers.safeTransferFrom(user, address(gooperation), i);
+            userMultiplier += gobblers.getGobblerEmissionMultiple(i);
+        }
+
+        assertEq(userMultiplier, gooperation.getUserGooShare(user));
+        emit log_named_uint("gooperation has starting multiplier of", userMultiplier);
+
+        // everyone should be able to call the mintLegendary function
+        vm.prank(users[1]);
+        gooperation.mintLegendaryGobbler(ids);
+
+        /////////////////////////
+        // try withdrawing goo //
+        /////////////////////////
+
+        vm.warp(block.timestamp + 10 days);
+
+        emit log_named_uint("user goo balance erc20 b4 withdraw", goo.balanceOf(user));
+        vm.prank(user);
+        gooperation.claimUserGooShare();
+        
+        emit log_named_uint("user goo balance erc20 after withdraw", goo.balanceOf(user));
+
+
     }
 
     // HELPERS

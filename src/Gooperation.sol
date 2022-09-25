@@ -119,25 +119,23 @@ contract Gooperation is ERC721TokenReceiver {
         // re-calculate user multiplier based on goo deposit
     }
     
-    // TODO
+    /// @notice withdraw all your Goo
+    /// @dev can only be called once
     function claimUserGooShare() public onlyAfterAuctionWin() {
+        uint256 userMultiplier = artGobblers.getUserEmissionMultiple(address(this));
+        require(userMultiplier > 0, "NO GOO AVAILABLE");
         uint256 totalGoo = artGobblers.gooBalance(address(this));
         
-        // uint256 userShare = totalGoo.divWadDown(artGobblers.getUserEmissionMultiple(address(this)));
-        uint256 userShare = (totalGoo / artGobblers.getUserEmissionMultiple(address(this))) * (getUserGooShare[msg.sender] * 2);
+        // multiply user share by 2 to account for legendary Gobbler boost
+        uint256 userShare = (totalGoo / userMultiplier) * (getUserGooShare[msg.sender] * 2);
+        // reset user share
         getUserGooShare[msg.sender] = 0;
         // transform virtual Goo to ERC20 for withdrawing
         artGobblers.removeGoo(userShare);
+
+        goo.approve(address(this), userShare);
         goo.transferFrom(address(this), msg.sender, userShare);
     }
-
-    /*
-    function withdrawGoo() {
-        // burn virtual goo to withdraw goo balance
-        // will need to keep track of goo belonging to a user
-        artgobblers.removeGoo()
-    }
-    */
 
     // VIEW FUNCTIONS
 
