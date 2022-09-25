@@ -71,6 +71,7 @@ contract Gooperation is ERC721TokenReceiver {
 
     // FUNCTIONS
 
+    /// @dev Implement the ERC721TokenReceiver interface
     function onERC721Received(address from, address, uint256 gobblerId, bytes memory) public virtual override onlyBeforeAuction() onlyBelowAuctionStartingPrice() returns (bytes4) {
         // update user ownership
         gobblerOwnerships[from][gobblerId] = true;
@@ -80,12 +81,17 @@ contract Gooperation is ERC721TokenReceiver {
         return this.onERC721Received.selector;
     }
 
+    /// @notice Withdraw a Gobbler to an address
+    /// @param to address to withdraw the Gobbler to
+    /// @param gobblerId ID of the Gobbler to withdraw
     function withdrawGobblerTo(address to, uint256 gobblerId) external ownsGobbler(gobblerId) {
         artGobblers.safeTransferFrom(address(this), to, gobblerId);
         // update user multiplier
         getUserGooShare[msg.sender] -= artGobblers.getGobblerEmissionMultiple(gobblerId);
     }
 
+    /// @notice Mint a legendary Gobbler through Gooperation
+    /// @param gobblerIds IDs of the Gobblers that will be burned for the legendary Gobbler
     /// @dev we leave the logic to choose which gobblers to burn to the user calling this function.
     function mintLegendaryGobbler(uint256[] calldata gobblerIds) public returns (uint256) {
         // checks on auction readiness and gobbler amount are already done by the ArtGobblers contract
@@ -95,20 +101,15 @@ contract Gooperation is ERC721TokenReceiver {
         return mintedLegendaryId;
     }
 
-    /// @notice requires approval
+    // TODO
+    /// @dev requires approval
     function depositGoo(uint256 _amount) public {
         goo.transferFrom(msg.sender, address(this), _amount);
+        // burn goo erc20 to add virtual goo balance
+        // artgobblers.addGoo()
     }
 
     /*
-    function depositGoo() {
-        // check if approved for transfer or revert? maybe dont need since it reverts by itself
-     
-
-        // burn goo erc20 to add virtual goo balance
-        artgobblers.addGoo()
-    }
-
     function withdrawGoo() {
         // burn virtual goo to withdraw goo balance
         // will need to keep track of goo belonging to a user

@@ -4,7 +4,7 @@ The legendary gobblers are for the people
 
 ## Usage
 
-Make sure you have[Foundry](https://github.com/foundry-rs/foundry) installed on your machine.
+Make sure you have [Foundry](https://github.com/foundry-rs/foundry) installed on your machine
 
 ### Setup
 
@@ -26,3 +26,12 @@ forge build
 forge test
 ```
 
+## TODO dev:
+
+- events
+- deploy scripts
+
+## TODO logic:
+
+- handling legendary gobbler after auction is won
+- handling goo deposits/withdrawals and each user's share
