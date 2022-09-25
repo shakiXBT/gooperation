@@ -17,12 +17,14 @@ contract Gooperation is ERC721TokenReceiver {
 
     mapping(address => uint256) public gooOwnerships;
 
+    uint256 public mintedLegendaryId;
     bool public wonAuction;
 
     // ERRORS
 
     error Unauthorized();
     error DepositsDisabled();
+    error InsufficientGobblerAmount(uint256 cost);
 
     modifier ownsGobbler(uint256 _gobblerId) {
         if (!gobblerOwnerships[msg.sender][_gobblerId]) revert Unauthorized();
@@ -53,16 +55,6 @@ contract Gooperation is ERC721TokenReceiver {
         goo = _goo;
     }
 
-    function withdrawGobblerTo(address to, uint256 gobblerId) public ownsGobbler(gobblerId) {
-        artGobblers.safeTransferFrom(address(this), to, gobblerId);
-    }
-
-    function withdrawGobbler(uint256 gobblerId) public {
-        withdrawGobblerTo(msg.sender, gobblerId);
-    }
-
-    function bidLegendaryGobbler() public {}
-
     function onERC721Received(address from, address, uint256 gobblerId, bytes memory) public virtual override onlyBeforeAuction() onlyBelowAuctionStartingPrice() returns (bytes4) {
         // update user ownership
         gobblerOwnerships[from][gobblerId] = true;
@@ -72,8 +64,19 @@ contract Gooperation is ERC721TokenReceiver {
         return this.onERC721Received.selector;
     }
 
-    function getGobblerOwnership(address owner, uint256 gobblerId) public view returns (bool) {
-        return gobblerOwnerships[owner][gobblerId];
+    function withdrawGobblerTo(address to, uint256 gobblerId) external ownsGobbler(gobblerId) {
+        artGobblers.safeTransferFrom(address(this), to, gobblerId);
+        // update user multiplier
+        getUserMultiplier[msg.sender] -= artGobblers.getGobblerEmissionMultiple(gobblerId);
+    }
+
+    /// @dev we leave the logic to choose which gobblers to burn to the user calling this function.
+    function mintLegendaryGobbler(uint256[] calldata gobblerIds) public returns (uint256) {
+        // checks on auction readiness and gobbler amount are already done by the ArtGobblers contract
+        mintedLegendaryId = artGobblers.mintLegendaryGobbler(gobblerIds);
+        // disable new gobbler deposits
+        wonAuction = true;
+        return mintedLegendaryId;
     }
 
     /// @notice requires approval
@@ -95,7 +98,9 @@ contract Gooperation is ERC721TokenReceiver {
         // will need to keep track of goo belonging to a user
         artgobblers.removeGoo()
     }
-
-
     */
+
+    function getGobblerOwnership(address owner, uint256 gobblerId) public view returns (bool) {
+        return gobblerOwnerships[owner][gobblerId];
+    }
 }

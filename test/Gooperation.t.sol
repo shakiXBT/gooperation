@@ -93,7 +93,7 @@ contract GooperationTest is DSTestPlus {
 
     // GOOPERATION TESTS
 
-    /// @dev check Gobbler deposit to Gooperation
+    /// @notice check Gobbler deposit to Gooperation
     function testGobblerDeposit() public {
         address user = users[0];
         bytes32[] memory proof;
@@ -116,7 +116,7 @@ contract GooperationTest is DSTestPlus {
 
     }
     
-    /// @dev check Gobbler withdrawal from Gooperation
+    /// @notice check Gobbler withdrawal from Gooperation
     function testGobblerWithdrawal() public {
         address user = users[0];
         bytes32[] memory proof;
@@ -138,7 +138,7 @@ contract GooperationTest is DSTestPlus {
         assertEq(gobblers.balanceOf(user), 1);
     }
 
-    /// @dev check Gobbler withdrawal from unauthorized wallet
+    /// @notice check Gobbler withdrawal from unauthorized wallet
     function testUnauthorizeGobblerdWithdrawal() public {
         address user = users[0];
         address user1 = users[1];
@@ -160,6 +160,7 @@ contract GooperationTest is DSTestPlus {
         assertEq(gobblers.balanceOf(user1), 0);
     }
 
+    // TODO actual test w/ assert, for now just used to debug contracts
     function testGooIssuance() public {
         address user = users[0];
         bytes32[] memory proof;
@@ -188,11 +189,10 @@ contract GooperationTest is DSTestPlus {
 
         emit log_named_uint("final goo balance erc20", goo.balanceOf(user));
         emit log_named_uint("final goo balance virtual", gobblers.gooBalance(user));
-        emit log_named_uint("final timestamp: ", block.timestamp); 
-
-        // TODO actual test w/ assert, for now just used to debug contracts
+        emit log_named_uint("final timestamp: ", block.timestamp);
     }
 
+    /// @notice Gobbler deposits should be disabled when Gooperation owns more than the starting auction price
     function testDepositDisabled() public {
         address user = users[0];
         mintGobblerToAddress(user, 70);
@@ -208,7 +208,36 @@ contract GooperationTest is DSTestPlus {
         vm.expectRevert(Gooperation.DepositsDisabled.selector);
         vm.prank(user);
         gobblers.safeTransferFrom(user, address(gooperation), auctionprice + 1);
-        // do the same but with auction won bool
+    }
+
+    function testMintLegendaryGobbler() public {
+        address user = users[0];
+        uint256 startTime = block.timestamp + 30 days;
+        vm.warp(startTime);
+        // Mint full interval to kick off first auction.
+        mintGobblerToAddress(user, gobblers.LEGENDARY_AUCTION_INTERVAL());
+        // can now call this without revert
+        uint256 cost = gobblers.legendaryGobblerPrice();
+        setRandomnessAndReveal(cost, "seed");
+
+        uint256 userMultiplier;
+
+        // Deposit to Gooperation
+        for (uint256 i = 1; i <= cost; ++i) {
+            ids.push(i);
+            vm.prank(user);
+            gobblers.safeTransferFrom(user, address(gooperation), i);
+            userMultiplier += gobblers.getGobblerEmissionMultiple(i);
+        }
+
+        assertEq(userMultiplier, gooperation.getUserMultiplier(user));
+        emit log_named_uint("user has starting multiplier of", userMultiplier);
+
+        // everyone should be able to call the mintLegendary function
+        vm.prank(users[1]);
+        uint256 mintedLegendaryId = gooperation.mintLegendaryGobbler(ids);
+
+        emit log_named_uint("minted legendary with id: ", mintedLegendaryId);
     }
 
     /*
