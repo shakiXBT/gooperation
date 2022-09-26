@@ -112,7 +112,7 @@ contract GooperationTest is DSTestPlus {
         assertEq(gobblers.balanceOf(address(gooperation)), 1);
 
         // verify gobbler ownership inside gooperation
-        assert(gooperation.getGobblerOwnership(user, 1));
+        assertEq(gooperation.getGobblerOwner(1), user);
 
     }
     
@@ -158,38 +158,6 @@ contract GooperationTest is DSTestPlus {
         gooperation.withdrawGobblerTo(user1, 1);
         
         assertEq(gobblers.balanceOf(user1), 0);
-    }
-
-    // TODO actual test w/ assert, for now just used to debug contracts
-    function testGooIssuance() public {
-        address user = users[0];
-        bytes32[] memory proof;
-        vm.prank(user);
-        gobblers.claimGobbler(proof);
-
-        vm.prank(address(gobblers));
-        goo.mintForGobblers(user, 1000000);
-
-        vm.prank(user);
-        gobblers.addGoo(1000000);
-
-        // warp for reveal
-        vm.warp(block.timestamp + 1 days);
-        setRandomnessAndReveal(1, "seed");
-
-        emit log_named_uint("user multipler:", gobblers.getUserEmissionMultiple(user));
-        emit log_named_uint("gobbler multipler:", gobblers.getGobblerEmissionMultiple(1));
-
-        emit log_named_uint("initial goo balance erc20", goo.balanceOf(user));
-        emit log_named_uint("initial goo balance virtual", gobblers.gooBalance(user));
-        emit log_named_uint("initial timestamp: ", block.timestamp); 
-
-        // warp to accrue goo
-        vm.warp(block.timestamp + 100);
-
-        emit log_named_uint("final goo balance erc20", goo.balanceOf(user));
-        emit log_named_uint("final goo balance virtual", gobblers.gooBalance(user));
-        emit log_named_uint("final timestamp: ", block.timestamp);
     }
 
     /// @notice Gobbler deposits should be disabled when Gooperation owns more than the starting auction price
@@ -240,28 +208,14 @@ contract GooperationTest is DSTestPlus {
         emit log_named_uint("minted legendary with id: ", mintedLegendaryId);
         assertEq(gobblers.ownerOf(mintedLegendaryId), address(gooperation));
 
-        assertEq(userMultiplier * 2, gobblers.getUserEmissionMultiple(address(gooperation)));
         emit log_named_uint("gooperation has final multiplier of", gobblers.getUserEmissionMultiple(address(gooperation)));
-    }
+        assertEq(userMultiplier * 2, gobblers.getUserEmissionMultiple(address(gooperation)));
 
-    function testDepositGoo() public {
-        address user = users[0];
-        bytes32[] memory proof;
-        vm.prank(user);
-        gobblers.claimGobbler(proof);
+        emit log_named_uint("user burned amount", gooperation.getUserBurnAmount(user));
+        emit log_named_uint("cost", cost);
+        assertEq(gooperation.getUserBurnAmount(user), cost);
 
-        vm.prank(address(gobblers));
-        goo.mintForGobblers(user, 1e18);
-        assertEq(goo.balanceOf(user), 1e18);
-
-        // approve
-        vm.prank(user);
-        goo.approve(address(gooperation), 1e18);
-
-        // deposit goo into gooperation
-        vm.prank(user);
-        gooperation.depositGoo(1e18);
-        // TODO check other logic
+        assertEq(gooperation.getUserGooShare(user), userMultiplier * 2);
     }
 
     function testClaimUserGooShare() public {
@@ -291,19 +245,13 @@ contract GooperationTest is DSTestPlus {
         vm.prank(users[1]);
         gooperation.mintLegendaryGobbler(ids);
 
-        /////////////////////////
-        // try withdrawing goo //
-        /////////////////////////
-
+        // claim goo 
         vm.warp(block.timestamp + 10 days);
-
         emit log_named_uint("user goo balance erc20 b4 withdraw", goo.balanceOf(user));
         vm.prank(user);
         gooperation.claimUserGooShare();
         
         emit log_named_uint("user goo balance erc20 after withdraw", goo.balanceOf(user));
-
-
     }
 
     // HELPERS

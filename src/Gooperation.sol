@@ -17,42 +17,55 @@ contract Gooperation is ERC721TokenReceiver {
     Goo public immutable goo;
 
     /// @notice The user ownerships of Gobblers deposited in this contract
-    /// @dev gobblerOwnerships[userAddress][gobblerId] == true
-    mapping(address => mapping(uint256 => bool)) public gobblerOwnerships;
+    mapping(uint256 => address) gobblerOwnerships;
 
     /// @notice The user shares of Goo produced by the legendary gobbler owned by this contract
     /// @dev An user's goo share is equal to the total multiplier of the gobblers they deposited
     mapping(address => uint256) public getUserGooShare;
 
-    /// @notice The Gobbler ID of the legendary Gobbler minted through this contract
-    uint256 public mintedLegendaryId;
+    uint256 public claimedMultiplier;
 
-    /// @notice Flag for knowing if the contract has already won a legendary Gobbler auction
-    bool public wonAuction;
+    /// @notice Data regarding the legendary auction
+    LegendaryAuctionData public legendaryAuctionData;
+
+    struct LegendaryAuctionData {
+        bool wonAuction;
+        uint256 legendaryId;
+        uint256 legendaryPrice;
+        mapping(address => uint256) gobblersBurnedByUser;
+    }
+
+    // EVENTS
+
+    event GobblerDeposit(address indexed user, uint256 indexed gobblerId);
+    event GobblerWithdraw(address indexed from, address indexed to, uint256 indexed gobblerId);
+    event GooShareClaim(address indexed user, uint256 indexed gooAmount);
+    event LegendaryAuctionWon(uint256 indexed legendaryId, uint256[] burnedGobblerIds);
 
     // ERRORS
 
     error Unauthorized();
     error DepositsDisabled();
     error ClaimsDisabled();
+    error UserDidNotPartecipateInAuction();
     error InsufficientGobblerAmount(uint256 cost);
 
     // MODIFIERS
 
     modifier ownsGobbler(uint256 _gobblerId) {
-        if (!gobblerOwnerships[msg.sender][_gobblerId]) revert Unauthorized();
+        if (gobblerOwnerships[_gobblerId] != msg.sender) revert Unauthorized();
 
         _;
     }
 
     modifier onlyBeforeAuction() {
-        if (wonAuction) revert DepositsDisabled();
+        if (legendaryAuctionData.wonAuction) revert DepositsDisabled();
 
         _;
     }
 
     modifier onlyAfterAuctionWin() {
-        if (!wonAuction) revert ClaimsDisabled();
+        if (!legendaryAuctionData.wonAuction) revert ClaimsDisabled();
 
         _;
     }
@@ -61,6 +74,14 @@ contract Gooperation is ERC721TokenReceiver {
         (uint128 auctionprice,) = artGobblers.legendaryGobblerAuctionData();
         if (artGobblers.balanceOf(address(this)) > auctionprice) {
             revert DepositsDisabled();
+        }
+
+        _;
+    }
+
+    modifier ownsLegendaryFraction(address _user) {
+        if (legendaryAuctionData.gobblersBurnedByUser[_user] == 0) {
+            revert UserDidNotPartecipateInAuction();
         }
 
         _;
@@ -79,74 +100,91 @@ contract Gooperation is ERC721TokenReceiver {
     // FUNCTIONS
 
     /// @dev Implement the ERC721TokenReceiver interface
-    function onERC721Received(address from, address, uint256 gobblerId, bytes memory) public virtual override onlyBeforeAuction() onlyBelowAuctionStartingPrice() returns (bytes4) {
+    function onERC721Received(address _from, address, uint256 _gobblerId, bytes memory) public virtual override onlyBeforeAuction() onlyBelowAuctionStartingPrice() returns (bytes4) {
         // update user ownership
-        gobblerOwnerships[from][gobblerId] = true;
+        gobblerOwnerships[_gobblerId] = _from;
         // update user multiplier
-        getUserGooShare[from] += artGobblers.getGobblerEmissionMultiple(gobblerId);
+        getUserGooShare[_from] += artGobblers.getGobblerEmissionMultiple(_gobblerId);
 
+        emit GobblerDeposit(_from, _gobblerId);
         return this.onERC721Received.selector;
     }
 
     /// @notice Withdraw a Gobbler to an address
-    /// @param to address to withdraw the Gobbler to
-    /// @param gobblerId ID of the Gobbler to withdraw
-    function withdrawGobblerTo(address to, uint256 gobblerId) external ownsGobbler(gobblerId) {
-        artGobblers.safeTransferFrom(address(this), to, gobblerId);
+    /// @param _to address to withdraw the Gobbler to
+    /// @param _gobblerId ID of the Gobbler to withdraw
+    function withdrawGobblerTo(address _to, uint256 _gobblerId) external ownsGobbler(_gobblerId) {
         // update user multiplier
-        getUserGooShare[msg.sender] -= artGobblers.getGobblerEmissionMultiple(gobblerId);
+        getUserGooShare[msg.sender] -= artGobblers.getGobblerEmissionMultiple(_gobblerId);
+        artGobblers.safeTransferFrom(address(this), _to, _gobblerId);
+        
+        emit GobblerWithdraw(msg.sender, _to, _gobblerId);
     }
 
     /// @notice Mint a legendary Gobbler through Gooperation
-    /// @param gobblerIds IDs of the Gobblers that will be burned for the legendary Gobbler
+    /// @param _gobblerIds IDs of the Gobblers that will be burned for the legendary Gobbler
     /// @dev we leave the logic to choose which gobblers to burn to the user calling this function.
-    function mintLegendaryGobbler(uint256[] calldata gobblerIds) public returns (uint256) {
+    function mintLegendaryGobbler(uint256[] calldata _gobblerIds) public returns (uint256) {
         // checks on auction readiness and gobbler amount are already done by the ArtGobblers contract
-        mintedLegendaryId = artGobblers.mintLegendaryGobbler(gobblerIds);
+        uint256 cost = artGobblers.legendaryGobblerPrice();
+        uint256 mintedLegendaryId = artGobblers.mintLegendaryGobbler(_gobblerIds);
+        emit LegendaryAuctionWon(mintedLegendaryId, _gobblerIds);
+        
+        uint256 gobblerId;
+        for (uint256 i = 0; i < cost; ++i) {
+            gobblerId = _gobblerIds[i];
+            // save which gobblers have been burned for the legendary
+            ++legendaryAuctionData.gobblersBurnedByUser[gobblerOwnerships[gobblerId]]; 
+            // adjust user multipliers
+            unchecked {
+                getUserGooShare[gobblerOwnerships[gobblerId]] += artGobblers.getGobblerEmissionMultiple(gobblerId);
+            }
+        }
         // disable new gobbler deposits
-        wonAuction = true;
+        legendaryAuctionData.wonAuction = true;
+        legendaryAuctionData.legendaryId = mintedLegendaryId;
         return mintedLegendaryId;
-    }
-
-    // TODO
-    /// @dev requires approval
-    function depositGoo(uint256 _amount) public {
-        require(goo.balanceOf(msg.sender) >= _amount, "you dont have enough goo");
-        require(goo.allowance(msg.sender, address(this)) >= _amount, "Check the token allowance");
-        goo.transferFrom(msg.sender, address(this), _amount);
-        // burn goo erc20 to add virtual goo balance
-        // artgobblers.addGoo()
-        // re-calculate user multiplier based on goo deposit
     }
     
     /// @notice withdraw all your Goo
     /// @dev can only be called once
-    function claimUserGooShare() public onlyAfterAuctionWin() {
-        uint256 userMultiplier = artGobblers.getUserEmissionMultiple(address(this));
-        require(userMultiplier > 0, "NO GOO AVAILABLE");
+    function claimUserGooShare() public onlyAfterAuctionWin() ownsLegendaryFraction(msg.sender) {
+        // uint256 userMultiplier = artGobblers.getUserEmissionMultiple(address(this));
+        // require(userMultiplier > 0, "NO GOO AVAILABLE");
+        uint256 legendaryId = legendaryAuctionData.legendaryId;
+        uint256 totalMultiplier = artGobblers.getGobblerEmissionMultiple(legendaryId) - claimedMultiplier;
         uint256 totalGoo = artGobblers.gooBalance(address(this));
-        
-        // multiply user share by 2 to account for legendary Gobbler boost
-        uint256 userShare = (totalGoo / userMultiplier) * (getUserGooShare[msg.sender] * 2);
+        uint256 userMultiplier = getUserGooShare[msg.sender];
+        uint256 userShare = (totalGoo / totalMultiplier) * (userMultiplier);
+
         // reset user share
         getUserGooShare[msg.sender] = 0;
+        // keep count of the withdrawn multiplier
+        claimedMultiplier += userMultiplier;
+
         // transform virtual Goo to ERC20 for withdrawing
         artGobblers.removeGoo(userShare);
-
         goo.approve(address(this), userShare);
         goo.transferFrom(address(this), msg.sender, userShare);
+
+        
+        emit GooShareClaim(msg.sender, userShare);
     }
 
     // VIEW FUNCTIONS
 
-    function getGobblerOwnership(address owner, uint256 gobblerId) public view returns (bool) {
-        return gobblerOwnerships[owner][gobblerId];
+    function getGobblerOwner(uint256 _gobblerId) public view returns (address) {
+        return gobblerOwnerships[_gobblerId];
     }
 
-    function getUserTotalGooShare(address user) public view returns (uint256) {
-        uint256 gooperationShare = artGobblers.gooBalance(address(this));
-        return (gooperationShare / artGobblers.getUserEmissionMultiple(address(this))) * getUserGooShare[user];
+    function getUserBurnAmount(address _user) external view returns (uint256) {
+        return legendaryAuctionData.gobblersBurnedByUser[_user];
+    }
 
+    // TODO remove ? or fix
+    function getUserTotalGooShare(address _user) public view returns (uint256)  {
+        uint256 gooperationShare = artGobblers.gooBalance(address(this));
+        return (gooperationShare / artGobblers.getUserEmissionMultiple(address(this))) * getUserGooShare[_user];
     }
 
     function getUserTotalGooShare() public view returns (uint256) {
