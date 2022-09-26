@@ -23,6 +23,9 @@ After auction win:
 - currently the users that have burned their Gobblers through Gooperation to acquire a Legendary Gobbler can only claim their share of Goo once.
 - handling scenarios where Legendary auction is won after the price goes down from starting price.
 
+## TODO dev:
+- deploy scripts
+
 ## Usage
 
 Make sure you have [Foundry](https://github.com/foundry-rs/foundry) installed on your machine
@@ -46,6 +49,3 @@ forge build
 ```sh
 forge test
 ```
-
-## TODO dev:
-- deploy scripts

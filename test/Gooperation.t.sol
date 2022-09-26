@@ -178,6 +178,7 @@ contract GooperationTest is DSTestPlus {
         gobblers.safeTransferFrom(user, address(gooperation), auctionprice + 1);
     }
 
+    /// @notice test minting a legendary Gobbler
     function testMintLegendaryGobbler() public {
         address user = users[0];
         uint256 startTime = block.timestamp + 30 days;
@@ -218,6 +219,7 @@ contract GooperationTest is DSTestPlus {
         assertEq(gooperation.getUserGooShare(user), userMultiplier * 2);
     }
 
+    /// @notice claim a user's goo share
     function testClaimUserGooShare() public {
         address user = users[0];
         uint256 startTime = block.timestamp + 30 days;
@@ -241,11 +243,11 @@ contract GooperationTest is DSTestPlus {
         assertEq(userMultiplier, gooperation.getUserGooShare(user));
         emit log_named_uint("gooperation has starting multiplier of", userMultiplier);
 
-        // everyone should be able to call the mintLegendary function
+        // anyone can call the mintLegendary function
         vm.prank(users[1]);
         gooperation.mintLegendaryGobbler(ids);
 
-        // claim goo 
+        // wait some time for Goo to start oozing
         vm.warp(block.timestamp + 10 days);
         emit log_named_uint("user goo balance erc20 b4 withdraw", goo.balanceOf(user));
         vm.prank(user);

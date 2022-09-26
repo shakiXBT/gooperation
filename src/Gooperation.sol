@@ -181,13 +181,4 @@ contract Gooperation is ERC721TokenReceiver {
         return legendaryAuctionData.gobblersBurnedByUser[_user];
     }
 
-    // TODO remove ? or fix
-    function getUserTotalGooShare(address _user) public view returns (uint256)  {
-        uint256 gooperationShare = artGobblers.gooBalance(address(this));
-        return (gooperationShare / artGobblers.getUserEmissionMultiple(address(this))) * getUserGooShare[_user];
-    }
-
-    function getUserTotalGooShare() public view returns (uint256) {
-        return getUserTotalGooShare(msg.sender);
-    }
 }
