@@ -1,0 +1,6 @@
+GooperationTest:testClaimUserGooShare() (gas: 43758950)
+GooperationTest:testDepositDisabled() (gas: 6926464)
+GooperationTest:testGobblerDeposit() (gas: 187498)
+GooperationTest:testGobblerWithdrawal() (gas: 199684)
+GooperationTest:testMintLegendaryGobbler() (gas: 43663083)
+GooperationTest:testUnauthorizeGobblerdWithdrawal() (gas: 191018)
