@@ -1,4 +1,4 @@
-GooperationTest:testClaimUserGooShare() (gas: 43758950)
+GooperationTest:testClaimUserGooShare() (gas: 43803980)
 GooperationTest:testDepositDisabled() (gas: 6926464)
 GooperationTest:testGobblerDeposit() (gas: 187498)
 GooperationTest:testGobblerWithdrawal() (gas: 199684)
