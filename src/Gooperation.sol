@@ -124,7 +124,7 @@ contract Gooperation is ERC721TokenReceiver {
     /// @notice Mint a legendary Gobbler through Gooperation
     /// @param _gobblerIds IDs of the Gobblers that will be burned for the legendary Gobbler
     /// @dev we leave the logic to choose which gobblers to burn to the user calling this function.
-    function mintLegendaryGobbler(uint256[] calldata _gobblerIds) public returns (uint256) {
+    function mintLegendaryGobbler(uint256[] calldata _gobblerIds) external returns (uint256) {
         // checks on auction readiness and gobbler amount are already done by the ArtGobblers contract
         uint256 cost = artGobblers.legendaryGobblerPrice();
         uint256 mintedLegendaryId = artGobblers.mintLegendaryGobbler(_gobblerIds);
@@ -146,13 +146,13 @@ contract Gooperation is ERC721TokenReceiver {
         return mintedLegendaryId;
     }
 
-    function depositGoo() public ownsLegendaryFraction(msg.sender) {
-
+    function depositGoo() external ownsLegendaryFraction(msg.sender) {
+        
     }
     
     /// @notice withdraw all your Goo
     /// @dev can only be called once
-    function claimUserGooShare() public onlyAfterAuctionWin() ownsLegendaryFraction(msg.sender) {
+    function claimUserGooShare() external onlyAfterAuctionWin() ownsLegendaryFraction(msg.sender) {
         uint256 totalMultiplier = artGobblers.getUserEmissionMultiple(address(this)) - claimedMultiplier;
         uint256 totalGoo = artGobblers.gooBalance(address(this));
         uint256 userMultiplier = getUserGooShare[msg.sender];
@@ -171,7 +171,7 @@ contract Gooperation is ERC721TokenReceiver {
 
     // VIEW FUNCTIONS
 
-    function getGobblerOwner(uint256 _gobblerId) public view returns (address) {
+    function getGobblerOwner(uint256 _gobblerId) external view returns (address) {
         return gobblerOwnerships[_gobblerId];
     }
 
