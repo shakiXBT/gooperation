@@ -145,14 +145,15 @@ contract Gooperation is ERC721TokenReceiver {
         legendaryAuctionData.legendaryId = mintedLegendaryId;
         return mintedLegendaryId;
     }
+
+    function depositGoo() public ownsLegendaryFraction(msg.sender) {
+
+    }
     
     /// @notice withdraw all your Goo
     /// @dev can only be called once
     function claimUserGooShare() public onlyAfterAuctionWin() ownsLegendaryFraction(msg.sender) {
-        // uint256 userMultiplier = artGobblers.getUserEmissionMultiple(address(this));
-        // require(userMultiplier > 0, "NO GOO AVAILABLE");
-        uint256 legendaryId = legendaryAuctionData.legendaryId;
-        uint256 totalMultiplier = artGobblers.getGobblerEmissionMultiple(legendaryId) - claimedMultiplier;
+        uint256 totalMultiplier = artGobblers.getUserEmissionMultiple(address(this)) - claimedMultiplier;
         uint256 totalGoo = artGobblers.gooBalance(address(this));
         uint256 userMultiplier = getUserGooShare[msg.sender];
         uint256 userShare = (totalGoo / totalMultiplier) * (userMultiplier);

@@ -219,6 +219,71 @@ contract GooperationTest is DSTestPlus {
         assertEq(gooperation.getUserGooShare(user), userMultiplier * 2);
     }
 
+    /// @notice test deposit gobblers that doesn't get burned and then fail to claim goo share
+    function testUnauthorizedClaim() public {
+        address user = users[0];
+        address user1 = users[1];
+        // move forward in time to allow minting
+        uint256 startTime = block.timestamp + 30 days;
+        vm.warp(startTime);
+        // mint full interval to kick off first auction
+        uint256 auctionTriggerId = gobblers.LEGENDARY_AUCTION_INTERVAL();
+        mintGobblerToAddress(user, auctionTriggerId - 1);
+        mintGobblerToAddress(user1, 1);
+        // can now call this without revert (should be 69)
+        uint256 cost = gobblers.legendaryGobblerPrice();
+        // reveal all minted gobblers
+        setRandomnessAndReveal(auctionTriggerId, "gool");
+
+        uint256 userMultiplier;
+
+        // Deposit 68 Gobblers from user1
+        vm.startPrank(user);
+        for (uint256 i = 1; i < cost; ++i) {
+            ids.push(i);
+            gobblers.safeTransferFrom(user, address(gooperation), i);
+            userMultiplier += gobblers.getGobblerEmissionMultiple(i);
+        }
+        vm.stopPrank();
+
+        emit log_named_address("OWNER OF LAST GOBBLER: ", gobblers.ownerOf(auctionTriggerId));
+
+        // Deposit 1 Gobbler from user1
+        vm.startPrank(user1);
+        ids.push(auctionTriggerId);
+        gobblers.safeTransferFrom(user1, address(gooperation), auctionTriggerId);
+        vm.stopPrank();
+
+        emit log_named_uint("gooperation has starting multiplier of", gobblers.getUserEmissionMultiple(address(gooperation)));
+
+        // mint a few gobblers so legendary price goes down
+        mintGobblerToAddress(users[3], 50);
+        emit log_named_uint("legendary price after warp", gobblers.legendaryGobblerPrice());
+
+        // anyone can call the mintLegendary function
+        vm.prank(users[3]);
+        gooperation.mintLegendaryGobbler(ids);
+
+        // check user multipliers add up:
+        assertEq(gooperation.getUserGooShare(user) + gooperation.getUserGooShare(user1), gobblers.getUserEmissionMultiple(address(gooperation)));
+        emit log_named_uint("user goo share in contract", gooperation.getUserGooShare(user));
+        emit log_named_uint("user1 goo share in contract", gooperation.getUserGooShare(user1));
+        emit log_named_uint("total goo share in contract", gobblers.getUserEmissionMultiple(address(gooperation)));
+
+        // wait some time for Goo to start oozing
+        vm.warp(block.timestamp + 10 days);
+
+        // user claims
+        vm.prank(user);
+        gooperation.claimUserGooShare();
+        emit log_named_uint("user goo balance erc20 after withdraw", goo.balanceOf(user));
+
+        // user1 tries to claim
+        vm.expectRevert(Gooperation.UserDidNotPartecipateInAuction.selector);
+        vm.prank(user1);
+        gooperation.claimUserGooShare();
+    }
+
     /// @notice test deposit gobblers from two users and then claim each user's share
     function testClaimUserGooShare() public {
         address user = users[0];
