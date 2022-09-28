@@ -164,10 +164,7 @@ contract Gooperation is ERC721TokenReceiver {
 
         // transform virtual Goo to ERC20 for withdrawing
         artGobblers.removeGoo(userShare);
-        goo.approve(address(this), userShare);
-        goo.transferFrom(address(this), msg.sender, userShare);
-
-        
+        goo.transfer(msg.sender, userShare);
         emit GooShareClaim(msg.sender, userShare);
     }
 
